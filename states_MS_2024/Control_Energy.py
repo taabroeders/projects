@@ -7,12 +7,12 @@
 
 #@author: Tommy Broeders
 #@email:  t.broeders@amsterdamumc.nl
-#updated: 11 04 2024
+#updated: 18 04 2024
 #status: done
 #to-do: -
 
 #Review History
-#Reviewed by -
+#Reviewed by Giuseppe Pontillo
 
 # Description:
 # - Calculate the minimum control energy associated with state-transitions
@@ -80,20 +80,6 @@ def matrix_normalization(A, version=None, c=1):
         A_norm = A_norm - np.eye(A.shape[0])
 
     return A_norm
-
-def normalize_state(x):
-    """
-    This function will normalize a brain state's magnitude using its euclidean norm.
-    
-    Args:
-        x (N, numpy array): brain state to be normalized.
-    Returns:
-        x_norm (N, numpy array): normalized brain state.
-    """
-
-    x_norm = x / np.linalg.norm(x, ord=2)
-
-    return x_norm
 
 def gramian(A,B,T,version=None,tol=1e-12):
     """
@@ -239,24 +225,16 @@ def state_trans_energy(A,ts,stateseq,statenum,T):
     
     #Calculate average whole brain minimum energy per state transition or state persistance (dwelling)
     Etrans=np.zeros([statenum,statenum])
-    EtransREG=np.zeros([ts.shape[0],statenum,statenum])
     transfreq=np.zeros([statenum,statenum])
     for i, St in enumerate(stateseq[0:len(stateseq)-1]):
         Etrans[St-1,stateseq[i+1]-1]=Etrans[St-1,stateseq[i+1]-1] + Eglob[i]
-        EtransREG[:,St-1,stateseq[i+1]-1]=np.sum([EtransREG[:,St-1,stateseq[i+1]-1],E[:,i]],axis=0)
         transfreq[St-1,stateseq[i+1]-1] = transfreq[St-1,stateseq[i+1]-1] + 1
         
     #Transform to relative values
     Etrans = np.divide(Etrans,transfreq, where=transfreq!=0)
     Etrans[transfreq==0]=np.NaN
     
-    EtransREG=np.divide(EtransREG,transfreq, where=transfreq!=0)
-    for i in range(EtransREG.shape[0]):
-        EtransREG_tmp=EtransREG[i,:,:]
-        EtransREG_tmp[transfreq==0]=np.NaN
-        EtransREG[i,:,:]=np.array(EtransREG_tmp)
-    
-    return Etrans,EtransREG,transfreq
+    return Etrans,transfreq
 
 #%%--------------------------------------------------------------------
 #                       Load data
@@ -273,7 +251,7 @@ included_regions[224]=0; #Exclude cerebellum
 numreg=np.sum(included_regions,dtype='int64')
 
 ##Import state sequence
-states = scipy.io.loadmat('StateDynamics.mat') #Output from EdgeTS_Kmeans_States.m script
+states = io.loadmat('StateDynamics.mat') #Output from EdgeTS_Kmeans_States.m script
 states = states['cluster'][2][0]
 states = np.reshape(states,[numpart_fmri,200])
 states=states[fmri_participants.isin(participants),:]
@@ -303,7 +281,6 @@ horizon_range=np.linspace(0.001,2.501,6)
 trans_cor = np.zeros([horizon_range.size,1])
 trans_p = np.zeros([horizon_range.size,1])
 Etrans = np.zeros([statenum,statenum,numpart,horizon_range.size])
-EtransREG = np.zeros([numreg,statenum,statenum,numpart,horizon_range.size])
 transfreq = np.zeros([statenum,statenum,numpart,horizon_range.size])
 transfreq_nan = np.zeros([statenum,statenum,numpart,horizon_range.size])
 mean_Etrans=np.zeros([statenum,statenum,horizon_range.size])
@@ -315,7 +292,7 @@ for i,horizon in enumerate(horizon_range):
     #Determine the transition energy per participant
     for j,part in enumerate(participants):
         print(part)
-        Etrans[:,:,j,i],EtransREG[:,:,:,j,i],transfreq[:,:,j,i] = transition_energy(StrucCon_norm[j,:,:],timeseries[j,:,:],states[j,:],statenum,horizon)
+        Etrans[:,:,j,i],transfreq[:,:,j,i] = state_trans_energy(StrucCon_norm[j,:,:],timeseries[j,:,:],states[j,:],statenum,horizon)
     
     #Determine which transitions are not observed
     transfreq_nan[:,:,:,i]=np.array(transfreq[:,:,:,i])
@@ -335,7 +312,6 @@ optimal_T_i=np.argmin(trans_cor[1:])
 optimal_T = horizon_range[optimal_T_i]
 
 Etrans_final=Etrans[:,:,:,optimal_T_i]
-EtransREG_final=EtransREG[:,:,:,:,optimal_T_i]
 
 HCparticipants=participants[participants.str.contains('^HC')]
 numHCpart=HCparticipants.size
@@ -382,7 +358,7 @@ CE_all = np.stack((CE11_eff,CE12_eff,CE13_eff,CE14_eff,
                    CE41_eff,CE42_eff,CE43_eff,CE44_eff),axis=1)
 
 with open('control_energy.pickle', 'wb') as f:
-    pickle.dump([Etrans,EtransREG,transfreq,trans_cor,trans_p,trans_cor,horizon_range,optimal_T,CE_total,CE_persist,CE_trans,CE_all], f)
+    pickle.dump([Etrans,transfreq,trans_cor,trans_p,trans_cor,horizon_range,optimal_T,CE_total,CE_persist,CE_trans,CE_all], f)
 
 #%%--------------------------------------------------------------------
 # References

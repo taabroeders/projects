@@ -4,12 +4,12 @@
 
 %@author: Tommy Broeders
 %@email:  t.broeders@amsterdamumc.nl
-%updated: 11 04 2024 
+%updated: 18 04 2024 
 %status: done 
 %to-do: -
 
 %Review History
-%Reviewed by -
+%Reviewed by Giuseppe Pontillo
 
 % Description:
 % - This code performs k-means clustering on edge time series data to deteremine state dynamics. 
@@ -99,7 +99,7 @@ save(output_file,'-v7.3')
 disp('Computing state parameters...')
 aIND=reshape(cluster{K_i},...   % Put the final clustering in a matrix 0(timepoints X subjects) 
     TSlength, numsubs);
-aFR=zeros(numsubs, klist(K_i)); % Initiate the fracitonal occupancy variable
+aFR=zeros(numsubs, klist(K_i)); % Initiate the fractional occupancy variable
 aTM=zeros(numsubs,...           % Initiate the transition matrix variable
     OptimalK, OptimalK);
 aMDT=zeros(numsubs, klist(K_i));% Initiate the mean dwell time variable
