@@ -18,9 +18,9 @@
 # - Calculate the minimum control energy associated with state-transitions
 #
 # - Prerequisites: The states need to have been defined
-# - Input: fMRI time series, DTI connectivity matrices, a state sequence,
-#          the included regions, 
-# - Output: files obtained after running the script
+# - Input: The fMRI time series, DTI connectivity matrices, a state sequence,
+#          and the included regions 
+# - Output: The transition control energy values
 #-----------------------------------------------------------------------
 """
 
